@@ -337,16 +337,29 @@ func addCacheInfo(sysFs sysfs.SysFs, node *info.Node) error {
 				Level: cache.Level,
 				Type:  cache.Type,
 			}
-			if cache.Cpus == numThreadsPerNode && cache.Level > cacheLevel2 {
-				// Add a node-level cache.
-				cacheFound := false
-				for _, nodeCache := range node.Caches {
-					if nodeCache == c {
-						cacheFound = true
+			if cache.Level > cacheLevel2 {
+				if cache.Cpus == numThreadsPerNode {
+					// Add a node-level cache.
+					cacheFound := false
+					for _, nodeCache := range node.Caches {
+						if nodeCache == c {
+							cacheFound = true
+						}
 					}
-				}
-				if !cacheFound {
-					node.Caches = append(node.Caches, c)
+					if !cacheFound {
+						node.Caches = append(node.Caches, c)
+					}
+				} else {
+					// Add `uncore` cache, for architecture in which l3 cache shared among some cores.
+					cacheFound := false
+					for _, unCoreCache := range node.Cores[coreID].UncoreCaches {
+						if unCoreCache == c {
+							cacheFound = true
+						}
+					}
+					if !cacheFound {
+						node.Cores[coreID].UncoreCaches = append(node.Cores[coreID].UncoreCaches, c)
+					}
 				}
 			} else if cache.Cpus == numThreadsPerCore {
 				// Add core level cache
